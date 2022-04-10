@@ -1,0 +1,3 @@
+class ChatNotFoundException : Exception() {
+
+}
