@@ -3,101 +3,94 @@ class ChatService {
     private var uniqueMessageId = 1
     var chatList = mutableListOf<Chat>()
 
-    fun createChat(chat: Chat): Int {
-        val newChat = chat.copy(chatId = uniqueChatId)
-        chatList.add(newChat)
-        uniqueChatId++
-        return newChat.chatId
+    private fun getChatId():Int = uniqueChatId++
+    private fun getMessageId():Int = uniqueMessageId++
+
+    fun clear () {
+        chatList.clear()
     }
 
     fun deleteChat(chatId: Int): Boolean {
-        if (chatList.removeIf { it.chatId == chatId }) {
-            return true
-        }
-        return false
+        return (chatList.removeIf { it.chatId == chatId })
     }
 
-    fun getChats(userId: Int): List<Chat> {
-        val chatSearchList = chatList.filter { it.userId == userId }
 
-        return if (chatSearchList.isNotEmpty()) {
-            chatSearchList
-        } else {
-            println("There are no messages")
-            emptyList()
-        }
-    }
+    fun getChats(userId: Int): List<Chat> =
+        chatList.filter { it.userId == userId }.ifEmpty { throw ChatNotFoundException() }.toList()
 
 
     fun getMessagesFromChat(chatId: Int, messageId: Int, amount: Int): List<Message> {
-        val result = chatList.single { it.chatId == chatId  }.messages
+        val chat = chatList.firstOrNull { it.chatId == chatId } ?: return emptyList()
+
+        val outputMessages = chat.messages
+            .asSequence()
             .filter { it.messageId >= messageId }
             .take(amount)
+            .toList()
 
-        for (chat in chatList) {
-            if (chatId == chatId) {
-                for (message in chat.messages) {
-                    message.read = true
-                }
-            }
-        }
-        return result
+        chat.messages.filter { it.messageId >= messageId }.take(amount).forEach { it.read = true }
+
+        return outputMessages
     }
 
 
-    fun createMessage(userId: Int, message: Message) {
-        if (message.chatId == 0) {
-            val newMessage = message.copy(userId = userId, messageId = uniqueMessageId)
-            val chatMessageList = mutableListOf(newMessage)
-            newMessage.chatId = createChat(Chat(message.userId, 0, chatMessageList))
-            uniqueMessageId++
-        } else {
-            val newMessage = message.copy(userId = userId, messageId = uniqueMessageId)
-            val list = chatList.filter { it.chatId == message.chatId }
-            if (list.isNotEmpty()) {
-                list[0].messages.add(newMessage)
-                uniqueMessageId++
-            } else {
-                throw ChatNotFoundException()
-            }
+    fun createMessage(userId: Int, receiverId: Int, message: String) {
+        val newMessage = Message(
+            userId = userId,
+            messageId = getMessageId(),
+            text = message,
+            read = false,
+            isIncoming = true
+        )
+
+        val newChat = chatList
+            .firstOrNull { it.userId == userId && it.receiverId == receiverId }
+            ?.let { chat -> chat.copy(messages = chat.messages + newMessage) }
+            ?: Chat(
+                userId = userId,
+                receiverId = receiverId,
+                chatId = getChatId(),
+                messages = mutableListOf(newMessage)
+            )
+
+        chatList.removeIf { newChat.chatId == it.chatId }
+        chatList.add(newChat)
+
+    }
+
+
+    fun editMessage(chatId: Int, editedMessage: Message): Boolean {
+        return try {
+            chatList.single { it.chatId == chatId }
+                .messages.single { it.messageId == editedMessage.messageId }
+                .text = editedMessage.text
+            true
+        } catch (ex: NoSuchElementException) {
+            println("Message not found")
+            false
         }
     }
 
 
-    fun editMessage(editedMessage: Message): Boolean {
-        for (chat in chatList) {
-            if (chat.chatId == editedMessage.chatId) {
-                for ((index, message) in chat.messages.withIndex()) {
-                    if (message.messageId == editedMessage.messageId) {
-                        chat.messages[index] = message.copy(text = editedMessage.text)
-                        return true
-                    }
-                }
-            }
-        }
-        return false
-    }
+    fun deleteMessage(chatId: Int, messageToDelete: Message): Boolean {
+        return try {
+            val messages = chatList.single { it.chatId == chatId}.messages as MutableList<Message>
+            messages.remove(messageToDelete)
 
-    fun deleteMessage(messageToDelete: Message): Boolean {
-        for (chat in chatList) {
-            if (chat.chatId == messageToDelete.chatId) {
-                if (chat.messages.remove(messageToDelete)) {
-                    if (chat.messages.isEmpty()) {
-                        deleteChat(chat.chatId)
-                    }
-                }
-            }
-            return true
+            chatList.firstOrNull { it.chatId == chatId }?.messages?.ifEmpty { deleteChat(chatId) }
+
+            true
+        } catch (ex: NoSuchElementException) {
+            println("Message not found")
+            false
         }
-        return false
     }
 
 
     fun getUnreadChatsCount(userId: Int): Int {
         return chatList.filter { it.userId == userId }
             .map { chat -> chat.messages.filter { !it.read && it.isIncoming } }
-            .filter { it.isNotEmpty() }.count()
-
+            .count()
     }
 
 
