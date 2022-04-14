@@ -6,20 +6,9 @@ import kotlin.math.exp
 class ChatServiceTest {
 
     @Test
-    fun createChat() {
-        val service = ChatService()
-
-        val expected = 1
-
-        val result = service.createChat(Chat(1, 1, mutableListOf()))
-
-        assertEquals(expected, result)
-    }
-
-    @Test
     fun deleteChatTrue() {
         val service = ChatService()
-        service.createChat(Chat(1, 1, mutableListOf()))
+        service.createMessage(1,2," ")
 
         val result = service.deleteChat(1)
 
@@ -29,7 +18,7 @@ class ChatServiceTest {
     @Test
     fun deleteChatFalse() {
         val service = ChatService()
-        service.createChat(Chat(1, 1, mutableListOf()))
+        service.createMessage(1,2," ")
 
         val result = service.deleteChat(2)
 
@@ -39,45 +28,46 @@ class ChatServiceTest {
     @Test
     fun getChats() {
         val service = ChatService()
-        service.createChat(Chat(1, 1, mutableListOf()))
+        service.createMessage(1,2," ")
 
         val result = service.getChats(1).isNotEmpty()
 
         assertTrue(result)
     }
 
-    @Test
-    fun getChatsEmpty() {
+    @Test (expected = ChatNotFoundException::class)
+    fun getChatsThrowsEx() {
         val service = ChatService()
-        service.createChat(Chat(1, 1, mutableListOf()))
+        service.createMessage(1,2," ")
 
-        val result = service.getChats(2).isNotEmpty()
-
-        assertFalse(result)
+        service.getChats(2)
     }
 
     @Test
     fun getMessagesFromChatTrue() {
         val service = ChatService()
-        service.createChat(Chat(1, 1, mutableListOf()))
-        service.createMessage(1, Message(1, 2, 0, 1, " ", 1, true, true))
+        service.createMessage(1,2," ")
 
         val result = service.getMessagesFromChat(1,1, 1).isNotEmpty()
 
         assertTrue(result)
     }
 
-    @Test(expected = NoSuchElementException::class)
-    fun getMessagesFromChatThrows() {
+    @Test
+    fun getMessagesFromChatEmpty() {
         val service = ChatService()
 
         service.getMessagesFromChat(1,1, 1)
+
+        val result = service.getMessagesFromChat(1,1, 1).isEmpty()
+
+        assertTrue(result)
     }
 
     @Test
     fun createMessage() {
         val service = ChatService()
-        service.createMessage(1, Message(1, 2, 0, 0, " ", 1, true, true))
+        service.createMessage(1,2," ")
 
         val result = service.chatList.isNotEmpty()
 
@@ -85,19 +75,13 @@ class ChatServiceTest {
 
     }
 
-    @Test(expected = ChatNotFoundException::class)
-    fun createMessageThrowsEx() {
-        val service = ChatService()
-        service.createMessage(1, Message(1, 2, 0, 1, " ", 1, true, true))
-
-    }
 
     @Test
     fun editMessageTrue() {
         val service = ChatService()
-        service.createMessage(1, Message(1, 2, 0, 0, " ", 1, true, true))
+        service.createMessage(1,2," ")
 
-        val result = service.editMessage(Message(1, 2, 1, 1, " ", 1, true, true))
+        val result = service.editMessage(1, Message(1, 1, " ", false, true))
 
         assertTrue(result)
     }
@@ -105,9 +89,9 @@ class ChatServiceTest {
     @Test
     fun editMessageFalse() {
         val service = ChatService()
-        service.createMessage(1, Message(1, 2, 0, 0, " ", 1, true, true))
+        service.createMessage(1,2," ")
 
-        val result = service.editMessage(Message(1, 2, 2, 1, " ", 1, true, true))
+        val result = service.editMessage(1, Message(1, 2, " ", false, true))
 
         assertFalse(result)
     }
@@ -115,9 +99,9 @@ class ChatServiceTest {
     @Test
     fun deleteMessageTrue() {
         val service = ChatService()
-        service.createMessage(1, Message(1, 2, 0, 0, " ", 1, true, true))
+        service.createMessage(1,2," ")
 
-        val result = service.deleteMessage(Message(1, 2, 1, 1, " ", 1, true, true))
+        val result = service.deleteMessage(1, Message(1, 1, " ", false, true))
 
         assertTrue(result)
     }
@@ -125,9 +109,9 @@ class ChatServiceTest {
     @Test
     fun deleteMessageFalse() {
         val service = ChatService()
-        service.createChat(Chat(1, 1, mutableListOf()))
+        service.createMessage(1,2," ")
 
-        val result = service.deleteMessage(Message(1,2,1,1," ",1,true,true))
+        val result = service.deleteMessage(1, Message(1, 2, " ", false, true))
 
         assertTrue(result)
     }
@@ -135,7 +119,7 @@ class ChatServiceTest {
     @Test
     fun getUnreadChatsCount() {
         val service = ChatService()
-        service.createMessage(1, Message(1, 2, 0, 0, " ", 1, false, true))
+        service.createMessage(1,2," ")
 
         val expected = 1
 
@@ -147,7 +131,7 @@ class ChatServiceTest {
     @Test
     fun getUnreadChatsCountZero() {
         val service = ChatService()
-        service.createMessage(1, Message(1, 2, 0, 0, " ", 1, true, true))
+        service.createMessage(1,2," ")
 
         val expected = 0
 
